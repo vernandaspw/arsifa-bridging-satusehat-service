@@ -6,14 +6,14 @@ use App\Http\Controllers\Rajal\RajalBundleController;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
-class RajalGetReg extends Command
+class RajalGetIhsPatient extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'rajal:get-reg';
+    protected $signature = 'rajal:getIhsPatient';
 
     /**
      * The console command description.
@@ -44,16 +44,16 @@ class RajalGetReg extends Command
         while ($initialDate->lte($currentDate)) {
             $date = $initialDate->toDateString();
 
-            $data = RajalBundleController::getRegTgl($date);
+            $data = RajalBundleController::getIhsPasienTgl($date);
 
             if ($data->status() == 200) {
                 $body = $data->getContent();
                 // $this->info("{$body['data']}");
                 if (
-                    isset($body['data']['data_store_count']) &&
-                    $body['data']['data_store_count'] == 0 &&
-                    isset($body['data']['data_store']) &&
-                    $body['data']['data_store'] == 0
+                    isset($body['data']['data_updated_count']) &&
+                    $body['data']['data_updated_count'] == 0 &&
+                    isset($body['data']['data_updated']) &&
+                    $body['data']['data_updated'] == 0
                 ) {
                     $this->info("Processed data for date: {$date}");
                 } else {

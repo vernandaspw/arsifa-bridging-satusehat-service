@@ -468,46 +468,7 @@ class RajalBundleController extends Controller
         }
     }
 
-    public function getIhsLocationTgl(Request $req)
-    {
-        $tanggal = $req->input('tanggal');
-        if (!isset($tanggal)) {
-            return response()->json([
-                'msg' => 'tanggal wajib di isi',
-            ], 400);
-        }
-
-        $qdata = SatusehatRegEncounter::whereDate('reg_tgl', $tanggal);
-        // $qdata->where('encounter_id', null)->orWhere('encounter_id', '');
-        $qdata->where('location_ihs', null)->orWhere('location_ihs', '');
-        $qdata->where('isDeleted', 0);
-        $datas = $qdata->get();
-
-        // update location ihs
-        // pada encounter dan tabel location
-        $dataUpdated = [];
-        foreach ($datas as $data) {
-            $originalData = clone $data;
-
-            // Proses pembaruan
-            $location_ihs = SatusehatLocation::cek($data->service_unit_id, $data->room_id, $data->room_code, $data->bed_id);
-            $data->location_ihs = $location_ihs;
-            $data->save();
-
-            // Bandingkan data asli dengan data baru
-            if ($originalData != $data) {
-                $dataUpdated[] = $data;
-            }
-        }
-        return response()->json([
-            'msg' => 'success sync data',
-            'data' => [
-                'data_updated_count' => $dataUpdated ? count($dataUpdated) : 0,
-                'data_updated' => $dataUpdated ? $dataUpdated : null,
-            ],
-        ]);
-    }
-    public function getIhsPasienTgl($tanggal)
+    public static function getIhsLocationTgl($tanggal)
     {
         if (!isset($tanggal)) {
             return response()->json([
@@ -515,43 +476,97 @@ class RajalBundleController extends Controller
             ], 400);
         }
 
-        $qdata = SatusehatRegEncounter::whereDate('reg_tgl', $tanggal);
-        // $qdata->where('encounter_id', null)->orWhere('encounter_id', '');
-        $qdata->where('patient_ihs', null)->orWhere('patient_ihs', '');
-        $qdata->where('isDeleted', 0);
-        $datas = $qdata->get();
+        try {
+            $qdata = SatusehatRegEncounter::whereDate('reg_tgl', $tanggal);
+            // $qdata->where('encounter_id', null)->orWhere('encounter_id', '');
+            $qdata->where('location_ihs', null)->orWhere('location_ihs', '');
+            $qdata->where('isDeleted', 0);
+            $datas = $qdata->get();
 
-        // update location ihs
-        // pada encounter dan tabel location
-        $chunks = array_chunk($datas->toArray(), 10);
+            // update location ihs
+            // pada encounter dan tabel location
+            $dataUpdated = [];
+            foreach ($datas as $data) {
+                $originalData = clone $data;
 
-        $dataUpdated = [];
-        foreach ($chunks as $chunk) {
-            foreach ($chunk as $data) {
-                // $ihs = PatientService::getByNIK('0003580888577');
-                $ihs = PatientService::getByNIK($data['patient_nik']);
-                //  dd($ihs);
-                if ($ihs) {
-                    // Proses pembaruan
-                    $savePatient = SatusehatPatient::saveIHS($data['MedicalNo'], $data['patient_nik'], $ihs);
-                    if ($savePatient) {
-                        $udata = SatusehatRegEncounter::where('noreg', $data['noreg'])->first();
-                        $udata->patient_ihs = $ihs;
-                        $udata->save();
+                // Proses pembaruan
+                $location_ihs = SatusehatLocation::cek($data->service_unit_id, $data->room_id, $data->room_code, $data->bed_id);
+                $data->location_ihs = $location_ihs;
+                $data->save();
 
-                        $dataUpdated[] = $udata;
-                    }
-
+                // Bandingkan data asli dengan data baru
+                if ($originalData != $data) {
+                    $dataUpdated[] = $data;
                 }
             }
+            return response()->json([
+                'msg' => 'success sync data',
+                'data' => [
+                    'data_updated_count' => $dataUpdated ? count($dataUpdated) : 0,
+                    'data_updated' => $dataUpdated ? $dataUpdated : null,
+                ],
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'msg' => 'error',
+                'data' => $e->getMessage(),
+            ], 500);
         }
-        return response()->json([
-            'msg' => 'success sync ihs pasien',
-            'data' => [
-                'data_updated_count' => $dataUpdated ? count($dataUpdated) : 0,
-                'data_updated' => $dataUpdated ? $dataUpdated : null,
-            ],
-        ]);
+    }
+    public static function getIhsPasienTgl($tanggal)
+    {
+        if (!isset($tanggal)) {
+            return response()->json([
+                'msg' => 'tanggal wajib di isi',
+            ], 400);
+        }
+
+        try {
+
+            $qdata = SatusehatRegEncounter::whereDate('reg_tgl', $tanggal);
+            // $qdata->where('encounter_id', null)->orWhere('encounter_id', '');
+            $qdata->where('patient_ihs', null)->orWhere('patient_ihs', '');
+            $qdata->where('isDeleted', 0);
+            $datas = $qdata->get();
+
+            // update location ihs
+            // pada encounter dan tabel location
+            $chunks = array_chunk($datas->toArray(), 10);
+
+            $dataUpdated = [];
+            foreach ($chunks as $chunk) {
+                foreach ($chunk as $data) {
+                    // $ihs = PatientService::getByNIK('0003580888577');
+                    $ihs = PatientService::getByNIK($data['patient_nik']);
+                    //  dd($ihs);
+                    if ($ihs) {
+                        // Proses pembaruan
+                        $savePatient = SatusehatPatient::saveIHS($data['MedicalNo'], $data['patient_nik'], $ihs);
+                        if ($savePatient) {
+                            $udata = SatusehatRegEncounter::where('noreg', $data['noreg'])->first();
+                            $udata->patient_ihs = $ihs;
+                            $udata->save();
+
+                            $dataUpdated[] = $udata;
+                        }
+
+                    }
+                }
+            }
+            return response()->json([
+                'msg' => 'success sync ihs pasien',
+                'data' => [
+                    'data_updated_count' => $dataUpdated ? count($dataUpdated) : 0,
+                    'data_updated' => $dataUpdated ? $dataUpdated : null,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'msg' => 'error',
+                'data' => $e->getMessage(),
+            ], 500);
+        }
     }
     public function getIhsPractitionerTgl(Request $req)
     {
