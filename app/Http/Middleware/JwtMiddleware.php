@@ -6,8 +6,6 @@ use Closure;
 use Dotenv\Dotenv;
 use Exception;
 use Firebase\JWT\ExpiredException;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use Firebase\JWT\SignatureInvalidException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -23,8 +21,9 @@ class JwtMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        $urlAuth = 'http://192.168.110.214:9000/arsifa/arsifa-service/public/api';
-        $app_id = '01J1CC4B79FSM7PGK95BZHY0YE';
+        $urlAuth = env('URL_SIFA_APLIKASI_AKUN_SERVICE');
+        $app_id = env('APP_ID');
+        // dd($app_id);
         $token = $request->bearerToken();
         if (!$token) {
             return response()->json(['error' => 'Token not provided'], 401);
@@ -35,8 +34,8 @@ class JwtMiddleware
             // $payload = JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
 
             $response = Http::withToken($token)->withHeaders([
-                'appid' => $app_id
-            ])->get($urlAuth .'/v1/me');
+                'appid' => $app_id,
+            ])->get($urlAuth . '/v1/me');
             // dd($response->json());
             if ($response->successful()) {
                 $user = $response->json();
@@ -45,7 +44,7 @@ class JwtMiddleware
             } else {
                 $res = $response->json();
                 return response()->json([
-                    'msg' => $res['msg']
+                    'msg' => $res['msg'],
                 ], $response->status());
             }
         } catch (ExpiredException $e) {
