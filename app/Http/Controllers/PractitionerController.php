@@ -42,10 +42,10 @@ class PractitionerController extends Controller
             $total = $practitioner->count();
 
             return response()->json([
-                'datas' => $practitioners,
                 'total' => $total,
                 'page' => $page,
                 'totalPages' => ceil($total / $limit),
+                'datas' => $practitioners,
             ]);
         } catch (\Throwable $e) {
             return response()->json([
