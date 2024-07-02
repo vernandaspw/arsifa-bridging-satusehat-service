@@ -30,11 +30,16 @@ class RsRajalRegistration extends Model
         if (!$sphaira) {
             return null;
         }
+        // dd($sphaira);
+        // if (env('APP_ENV') != 'local') {
+        $encounter_id = $sphaira->EncounterIHS;
+        // } else {
+        //     $encounter_id = $sphaira->EncounterIHSsanbox;
+
+        // }
         // production
-        // $encounter_id = $sphaira->EncounterIHS;
 
         // sanbox
-        $encounter_id = $sphaira->EncounterIHSsanbox;
 
         if (!$encounter_id) {
             return null;
