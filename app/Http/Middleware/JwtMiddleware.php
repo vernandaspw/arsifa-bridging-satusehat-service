@@ -23,9 +23,9 @@ class JwtMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        $app_id = env('APP_ID');
+        $urlAuth = 'http://192.168.110.214:9000/arsifa/arsifa-service/public/api';
+        $app_id = '01J1CC4B79FSM7PGK95BZHY0YE';
         $token = $request->bearerToken();
-
         if (!$token) {
             return response()->json(['error' => 'Token not provided'], 401);
         }
@@ -33,10 +33,10 @@ class JwtMiddleware
         $dotenv->safeLoad();
         try {
             // $payload = JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
-            // dd(env('URL_SIFA_APLIKASI_AKUN_SERVICE') .'/v1/me');
+
             $response = Http::withToken($token)->withHeaders([
                 'appid' => $app_id
-            ])->get(env('URL_SIFA_APLIKASI_AKUN_SERVICE') .'/v1/me');
+            ])->get($urlAuth .'/v1/me');
             // dd($response->json());
             if ($response->successful()) {
                 $user = $response->json();
