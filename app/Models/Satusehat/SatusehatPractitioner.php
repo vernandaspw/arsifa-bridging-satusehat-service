@@ -46,7 +46,7 @@ class SatusehatPractitioner extends Model
                 $data_update->ParamedicNIK = $nik;
                 $data_update->save();
             }
-        }else{
+        } else {
             $data_store = new SatusehatPractitioner();
             $data_store->ParamedicID = $id;
             $data_store->ParamedicCode = $code;
@@ -120,17 +120,18 @@ class SatusehatPractitioner extends Model
     {
         try {
             set_time_limit(500);
-            $locals = SatusehatPractitioner::where('ParamedicNIK', '!=', null)->orWhere('ParamedicNIK', '!=', '')->orWhere('ParamedicNIK', '!=', '-')->where('IHS', null)->get();
+            $locals = SatusehatPractitioner::where('ParamedicNIK', '!=', null)->where('ParamedicNIK', '!=', '')->where('ParamedicNIK', '!=', '-')->where('IHS', null)->get();
 
             // dd($locals->toArray());
             foreach ($locals as $local) {
-
-                $ss = PracticionerService::getByNIK($local->ParamedicNIK);
-                if ($ss != null) {
-                    $ihs = $ss['entry'][0]['resource']['id'];
-                    $local->update([
-                        'IHS' => $ihs,
-                    ]);
+                if (strlen($local->ParamedicNIK) == 16) {
+                    $ss = PracticionerService::getByNIK($local->ParamedicNIK);
+                    if ($ss != null) {
+                        $ihs = $ss['entry'][0]['resource']['id'];
+                        $local->update([
+                            'IHS' => $ihs,
+                        ]);
+                    }
                 }
             }
 
