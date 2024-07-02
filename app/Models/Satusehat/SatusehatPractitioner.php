@@ -120,7 +120,7 @@ class SatusehatPractitioner extends Model
     {
         try {
             set_time_limit(500);
-            $locals = SatusehatPractitioner::where('ParamedicNIK', '!=', null)->where('ParamedicNIK', '!=', '')->where('ParamedicNIK', '!=', '-')->where('IHS', null)->get();
+            $locals = SatusehatPractitioner::where('ParamedicNIK', '!=', null)->orWhere('ParamedicNIK', '!=', '')->orWhere('ParamedicNIK', '!=', '-')->where('IHS', null)->get();
 
             // dd($locals->toArray());
             foreach ($locals as $local) {
