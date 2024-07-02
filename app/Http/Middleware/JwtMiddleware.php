@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Dotenv\Dotenv;
 use Exception;
 use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
@@ -28,7 +29,8 @@ class JwtMiddleware
         if (!$token) {
             return response()->json(['error' => 'Token not provided'], 401);
         }
-
+        $dotenv = Dotenv::createUnsafeImmutable(getcwd());
+        $dotenv->safeLoad();
         try {
             // $payload = JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
             // dd(env('URL_SIFA_APLIKASI_AKUN_SERVICE') .'/v1/me');
