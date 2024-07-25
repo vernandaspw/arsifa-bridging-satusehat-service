@@ -376,13 +376,13 @@ class RajalBundleController extends Controller
                 } else {
                     // perbarui yg tidak memiliki encounter sja
                     $updateRegsNoDisharge[] = $regsArray;
-                    if ($regsArray['encounter_id'] == null) {
-                        if ($regsArray['discharge_tgl'] == null) {
-                        }
-                        // else {
-                        //     $updateRegsDisharge[] = $regsArray;
-                        // }
-                    }
+                    // if ($regsArray['encounter_id'] == null) {
+                    //     if ($regsArray['discharge_tgl'] == null) {
+                    //     }
+                    //     // else {
+                    //     //     $updateRegsDisharge[] = $regsArray;
+                    //     // }
+                    // }
                 }
 
             }
@@ -405,7 +405,12 @@ class RajalBundleController extends Controller
                     $dataUpdate = SatusehatRegEncounter::where('noreg', $item['noreg'])->first();
                     // dd($dataUpdate->toArray(), $item);
                     // jika ada perbedaan data pada tiap item
-                    if ($dataUpdate->discharge_tgl != $item['discharge_tgl'] ||
+                    // if($dataUpdate->encounter_id == null){
+                    //     $dataUpdate->discharge_tgl = $item['discharge_tgl'];
+                    // }
+                    if (
+                        ($dataUpdate->encounter_id == null && $dataUpdate->encounter_id != $item['encounter_id'])  ||
+                        $dataUpdate->discharge_tgl != $item['discharge_tgl'] ||
                         $dataUpdate->service_unit_id != $item['service_unit_id'] ||
                         $dataUpdate->room_id != $item['room_id'] ||
                         $dataUpdate->room_code != $item['room_code'] ||
@@ -419,6 +424,7 @@ class RajalBundleController extends Controller
                         $dataUpdate->practitioner_ihs != $item['practitioner_ihs'] ||
                         $dataUpdate->isDeleted != $item['isDeleted']
                     ) {
+                        $dataUpdate->encounter_id = $item['encounter_id'];
                         $dataUpdate->discharge_tgl = $item['discharge_tgl'];
                         $dataUpdate->service_unit_id = $item['service_unit_id'];
                         $dataUpdate->room_id = $item['room_id'];
@@ -588,6 +594,44 @@ class RajalBundleController extends Controller
             ], 400);
         }
 
+    }
+
+    public static function encounterPostPerTanggal(Request $req, $tanggal)
+    {
+        $tipe = 'rajal';
+        $tanggal = $req->tanggal;
+        if (!isset($tanggal) && !isset($tanggal)) {
+            return response()->json([
+                'msg' => 'tipe & tanggal wajib di isi',
+            ], 400);
+        }
+
+        try {
+            // jika encounter_id tersedia, update data, jika tidak maka generate encounter_id
+            $regs = SatusehatRegEncounter::where('tipe', $tipe)->whereDate('reg_tgl', $tanggal)->where('isDeleted', 0)->get();
+            foreach ($regs as $reg) {
+                if ($reg->encounter_id == null) {
+                    // post baru
+                    // melakukan pengecekan location_ihs, patient_ihs, practitioner_ihs
+                    // simpan callback id nanti saja
+
+
+                }else{
+                    // perbaui, nanti
+                }
+            }
+            return response()->json($regs);
+
+
+            return response()->json([
+                'msg' => 'success',
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'msg' => 'error',
+                'data' => $e->getMessage()
+            ], 500);
+        }
     }
 
 }

@@ -39,7 +39,7 @@ class RajalGetIhsPatient extends Command
      */
     public function handle()
     {
-        $initialDate = Carbon::parse('2024-01-01');
+        $initialDate = Carbon::parse('2024-02-27');
         $currentDate = Carbon::now();
         while ($initialDate->lte($currentDate)) {
             $date = $initialDate->toDateString();

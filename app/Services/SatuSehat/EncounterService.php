@@ -121,6 +121,7 @@ class EncounterService
         $data = $response->getBody()->getContents();
         return json_decode($data, true);
     }
+
     protected static function bodyPostEncounterCondition(array $body)
     {
         $waktuWIB = date('Y-m-d\TH:i:sP', time());
@@ -325,7 +326,55 @@ class EncounterService
             $url = ConfigSatuSehat::setUrl();
 
             $bodyRaw = self::bodyPostEncounterCondition($body);
+     
+            $httpClient = new Client(
+                [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $token,
+                    ],
+                    'json' => $bodyRaw,
+                ]
+            );
+            $response = $httpClient->post($url);
+
+            $data = $response->getBody()->getContents();
+            return json_decode($data, true);
+        } catch (\Throwable $e) {
+            dd($e->getMessage());
+        }
+    }
+
+    public static function bodyEncounter(array $body)
+    {
+        $data = [
+            "resourceType" => "Bundle",
+            "type" => "transaction",
+            "entry" => [
+                $encounter,
+                $condition,
+            ],
+        ];
+
+        return $data;
+    }
+
+    
+
+    public static function postEncounter(array $body)
+    {
+        // generate uuid encounter jika baru
+        if ($encounter_id == null) {
+            $encounter_id = Str::uuid();
+        }
+
+        try {
+            $token = AccessToken::token();
+
+            $url = ConfigSatuSehat::setUrl();
+
+            $bodyRaw = self::bodyEncounter($body);
             // dd($bodyRaw);
+
             $jsonData = json_encode($bodyRaw, JSON_PRETTY_PRINT);
 
             $httpClient = new Client(
@@ -343,5 +392,6 @@ class EncounterService
         } catch (\Throwable $e) {
             dd($e->getMessage());
         }
+
     }
 }
