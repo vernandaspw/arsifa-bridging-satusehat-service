@@ -53,6 +53,7 @@ Route::middleware(['auth.jwt'])->group(function () {
 
 
 });
+Route::get('rajal/encounter/chart', [RajalBundleController::class, 'chart']);
 Route::get('rajal/encounter', [RajalBundleController::class, 'encounter']);
 // Route::get('rajal/encounter-detail/{encounterId}', [RajalBundleController::class, 'encounterDetail']);
 Route::get('rajal/get-reg/tanggal/{tanggal}', [RajalBundleController::class, 'getRegTgl']);
@@ -61,6 +62,5 @@ Route::get('rajal/get-ihs-patient/tanggal/{tanggal}', [RajalBundleController::cl
 // Route::get('rajal/get-ihs-practitioner/tanggal', [RajalBundleController::class, 'getIhsPractitionerTgl']);
 // Route::get('rajal/get-encounter-id/tanggal', [RajalBundleController::class, 'getEncounterIdTgl']);
 
-Route::post('rajal/encounter/{tanggal}', [RajalBundleController::class, 'encounterPostPerTanggal']);
+Route::post('rajal/encounter/tanggal/{tanggal}', [RajalBundleController::class, 'encounterPostPerTanggal']);
 
-Route::get('rajal/encounter/chart', [RajalBundleController::class, 'chart']);

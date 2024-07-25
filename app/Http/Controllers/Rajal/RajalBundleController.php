@@ -9,6 +9,7 @@ use App\Models\Satusehat\SatusehatPatient;
 use App\Models\Satusehat\SatusehatPractitioner;
 use App\Models\Satusehat\SatusehatRegEncounter;
 use App\Services\SatuSehat\PatientService;
+use App\Services\SatuSehat\RajalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -22,7 +23,7 @@ class RajalBundleController extends Controller
             $tahun = $req->input('tahun');
 
             if ($tahun == null || $bulan == null) {
-                return response()->json(['msg' => 'tahun dan tanggal wajib di isi'], 400);
+                return response()->json(['msg' => 'tahun dan bulan wajib di isi'], 400);
             }
             // dd($tahun);
 
@@ -596,10 +597,10 @@ class RajalBundleController extends Controller
 
     }
 
-    public static function encounterPostPerTanggal(Request $req, $tanggal)
+    public static function encounterPostPerTanggal($tanggal)
     {
         $tipe = 'rajal';
-        $tanggal = $req->tanggal;
+        // $tanggal = $req->tanggal;
         if (!isset($tanggal) && !isset($tanggal)) {
             return response()->json([
                 'msg' => 'tipe & tanggal wajib di isi',
@@ -608,23 +609,77 @@ class RajalBundleController extends Controller
 
         try {
             // jika encounter_id tersedia, update data, jika tidak maka generate encounter_id
-            $regs = SatusehatRegEncounter::where('tipe', $tipe)->whereDate('reg_tgl', $tanggal)->where('isDeleted', 0)->get();
+            $regs = SatusehatRegEncounter::where('tipe', $tipe)
+            ->whereDate('reg_tgl', $tanggal)
+            ->where('isDeleted', 0)
+            ->where('patient_ihs', '!=', null)
+            ->where('location_ihs', '!=', null)
+            ->where('practitioner_ihs', '!=', null)
+            ->get();
+            $countPost = 0;
+            $countUpdate = 0;
+            // dd($regs);
             foreach ($regs as $reg) {
+                // dd($reg->encounter_id);
+                // encounter_id
+                // location_ihs
+                // patient_ihs
+                // practitioner_ihs
+                dd($reg);
+
+                // $body = [
+                //     'noreg' => $reg->noreg,
+                //     'patient_id' =>
+                //     'patient_name' => ,
+
+                //     'practitionerIhs' => $registration['ihs_dokter'],
+                //     'practitionerName' => $registration['nama_dokter'],
+                //     'organizationId' => $organization_id,
+                //     'locationId' => $location_id,
+                //     'locationName' => $location_name,
+                //     'statusHistory' => 'arrived',
+                //     'RegistrationDateTime' => $registration['RegistrationDateTime'],
+                //     'DischargeDateTime' => $registration['DischargeDateTime'],
+                //     'diagnosas' => $registration['diagnosas'],
+                // ];
+
                 if ($reg->encounter_id == null) {
                     // post baru
-                    // melakukan pengecekan location_ihs, patient_ihs, practitioner_ihs
-                    // simpan callback id nanti saja
+                    // post bundle encounter
+                        $body = ['aa' => 'aa'];
+                        $encounterArived = RajalService::encounterKunjunganBaru($body);
 
+                        dd($resultApi);
+                        // if (!empty($resultApi['entry'][0]['response']['resourceID'])) {
+                        //     $encounterID = $resultApi['entry'][0]['response']['resourceID'];
+                        // } else {
+                        //     $url = $resultApi['entry'][0]['response']['location'];
+                        //     $uuid = explode('/', parse_url($url, PHP_URL_PATH))[4];
+                        //     $encounterID = $uuid;
+                        // }
+
+                        // if (empty($encounterID)) {
+                        //     $errorMessage = 'EncounterID tidak valid';
+                        //     return $this->emit('error', $errorMessage);
+                        // }
+
+                        // RegistrationService::updateEncounterId($noReg, $encounterID);
+                        // $this->fetchData($this->tanggal);
 
                 }else{
                     // perbaui, nanti
+                    // cek data apa saja yg telah dikirim
+
+                    //
                 }
             }
-            return response()->json($regs);
+            // return response()->json($regs);
 
 
             return response()->json([
                 'msg' => 'success',
+                'count_post' => $countPost,
+                'count_update' => $countUpdate,
             ], 200);
         } catch (\Throwable $e) {
             return response()->json([
