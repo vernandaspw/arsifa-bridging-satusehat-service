@@ -647,9 +647,15 @@ class RajalBundleController extends Controller
                     // post baru
                     // post bundle encounter
                         $body = ['aa' => 'aa'];
-                        $encounterArived = RajalService::encounterKunjunganBaru($body);
-
-                        dd($resultApi);
+                        $encounterKunjunganBaru = RajalService::encounterKunjunganBaru($body);
+                        if($encounterKunjunganBaru) {
+                            $encounter_id = $encounterKunjunganBaru;
+                            // jika success, kirim data langkah berikutnya
+                            return $encounterKunjunganBaru;
+                        }else{
+                            return 'error';
+                        }
+                        // dd($resultApi);
                         // if (!empty($resultApi['entry'][0]['response']['resourceID'])) {
                         //     $encounterID = $resultApi['entry'][0]['response']['resourceID'];
                         // } else {
