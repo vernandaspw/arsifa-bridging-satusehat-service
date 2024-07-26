@@ -725,23 +725,16 @@ class RajalService
         }
     }
 
-    static function wibToUTC($waktuWIB) {
+    public static function wibToUTC($waktuWIB)
+    {
         $dateTimeWIB = new DateTime($waktuWIB);
         $dateTimeWIB->modify("-7 hours");
         $waktuUTC = $dateTimeWIB->format('Y-m-d\TH:i:sP');
         return $waktuUTC;
     }
 
-    public static function encounterKunjunganBaruBody(array $body)
+    public static function encounterKunjunganBaruBody($noreg, $reg_tgl, $location_id, $location_name, $patient_id, $patient_name, $practitioner_id, $practitioner_name)
     {
-        $noreg = $body['noreg'];
-        $reg_tgl = RajalService::wibToUTC($body['reg_tgl']);
-        $location_id = $body['location_id'];
-        $location_name = $body['location_name'];
-        $patient_id = $body['patient_id'];
-        $patient_name = $body['patient_name'];
-        $practitioner_id = $body['practitioner_id'];
-        $practitioner_name = $body['practitioner_name'];
 
         $uuidEncounter = Str::uuid();
 
@@ -760,7 +753,7 @@ class RajalService
                 "display" => "ambulatory",
             ],
             "subject" => [
-                "reference" => "Patient/". $patient_id,
+                "reference" => "Patient/" . $patient_id,
                 "display" => $patient_name,
             ],
             "participant" => [
@@ -777,7 +770,7 @@ class RajalService
                         ],
                     ],
                     "individual" => [
-                        "reference" => "Practitioner/". $practitioner_id,
+                        "reference" => "Practitioner/" . $practitioner_id,
                         "display" => $practitioner_name,
                     ],
                 ],
@@ -788,7 +781,7 @@ class RajalService
             "location" => [
                 [
                     "location" => [
-                        "reference" => "Location/". $location_id,
+                        "reference" => "Location/" . $location_id,
                         "display" => $location_name,
                     ],
                     "period" => [
@@ -849,7 +842,16 @@ class RajalService
 
             $url = ConfigSatuSehat::setUrl() . '/Encounter';
 
-            $bodyRaw = RajalService::encounterKunjunganBaruBody($body);
+            $noreg = $body['noreg'];
+            $reg_tgl = RajalService::wibToUTC($body['reg_tgl']);
+            $location_id = $body['location_id'];
+            $location_name = $body['location_name'];
+            $patient_id = $body['patient_id'];
+            $patient_name = $body['patient_name'];
+            $practitioner_id = $body['practitioner_id'];
+            $practitioner_name = $body['practitioner_name'];
+
+            $bodyRaw = RajalService::encounterKunjunganBaruBody($noreg, $reg_tgl, $location_id, $location_name, $patient_id, $patient_name, $practitioner_id, $practitioner_name);
             // dd($bodyRaw);
             // $jsonData = json_encode($bodyRaw, JSON_PRETTY_PRINT);
 
@@ -876,120 +878,109 @@ class RajalService
         }
     }
 
-    public static function encounterMasukRuangBody(array $body, $encounter_id)
+    public static function encounterMasukRuangBody($encounter_id, $noreg, $reg_tgl, $location_id, $location_name, $patient_id, $patient_name, $practitioner_id, $practitioner_name)
     {
-        $noreg = $body['noreg'];
-        $reg_tgl = RajalService::wibToUTC($body['reg_tgl']);
-        $location_id = $body['location_id'];
-        $location_name = $body['location_name'];
-        $patient_id = $body['patient_id'];
-        $patient_name = $body['patient_name'];
-        $practitioner_id = $body['practitioner_id'];
-        $practitioner_name = $body['practitioner_name'];
-
-        $uuidEncounter = Str::uuid();
-
         $raw = [
-            "resourceType"=> "Encounter",
-            "id"=> "{{Encounter_id}}",
-            "identifier"=> [
+            "resourceType" => "Encounter",
+            "id" => "{{Encounter_id}}",
+            "identifier" => [
                 [
-                    "system"=> "http://sys-ids.kemkes.go.id/encounter/{{Org_ID}}",
-                    "value"=> "{{Encounter_Registration_ID}}"
-                ]
+                    "system" => "http://sys-ids.kemkes.go.id/encounter/{{Org_ID}}",
+                    "value" => "{{Encounter_Registration_ID}}",
+                ],
             ],
-            "status"=> "in-progress",
-            "class"=> [
-                "system"=> "http://terminology.hl7.org/CodeSystem/v3-ActCode",
-                "code"=> "AMB",
-                "display"=> "ambulatory"
+            "status" => "in-progress",
+            "class" => [
+                "system" => "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+                "code" => "AMB",
+                "display" => "ambulatory",
             ],
-            "subject"=> [
-                "reference"=> "Patient/{{Patient_ID}}",
-                "display"=> "{{Patient_Name}}"
+            "subject" => [
+                "reference" => "Patient/{{Patient_ID}}",
+                "display" => "{{Patient_Name}}",
             ],
-            "participant"=> [
+            "participant" => [
                 [
-                    "type"=> [
+                    "type" => [
                         [
-                            "coding"=> [
+                            "coding" => [
                                 [
-                                    "system"=> "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
-                                    "code"=> "ATND",
-                                    "display"=> "attender"
-                                ]
-                            ]
-                        ]
+                                    "system" => "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                                    "code" => "ATND",
+                                    "display" => "attender",
+                                ],
+                            ],
+                        ],
                     ],
-                    "individual"=> [
-                        "reference"=> "Practitioner/{{Practitioner_ID}}",
-                        "display"=> "{{Practitioner_Name}}"
-                    ]
-                ]
+                    "individual" => [
+                        "reference" => "Practitioner/{{Practitioner_ID}}",
+                        "display" => "{{Practitioner_Name}}",
+                    ],
+                ],
             ],
-            "period"=> [
-                "start"=> "2023-08-31T01:00:00+00:00"
+            "period" => [
+                "start" => "2023-08-31T01:00:00+00:00",
             ],
-            "location"=> [
+            "location" => [
                 [
-                    "location"=> [
-                        "reference"=> "Location/{{Location_Poli_id}}",
-                        "display"=> "{{Location_Poli_Name}}"
+                    "location" => [
+                        "reference" => "Location/{{Location_Poli_id}}",
+                        "display" => "{{Location_Poli_Name}}",
                     ],
-                    "period"=> [
-                        "start"=> "2023-08-31T00:00:00+00:00"
+                    "period" => [
+                        "start" => "2023-08-31T00:00:00+00:00",
                     ],
-                    "extension"=> [
+                    "extension" => [
                         [
-                            "url"=> "https://fhir.kemkes.go.id/r4/StructureDefinition/ServiceClass",
-                            "extension"=> [
+                            "url" => "https://fhir.kemkes.go.id/r4/StructureDefinition/ServiceClass",
+                            "extension" => [
                                 [
-                                    "url"=> "value",
-                                    "valueCodeableConcept"=> [
-                                        "coding"=> [
+                                    "url" => "value",
+                                    "valueCodeableConcept" => [
+                                        "coding" => [
                                             [
-                                                "system"=> "http://terminology.kemkes.go.id/CodeSystem/locationServiceClass-Outpatient",
-                                                "code"=> "reguler",
-                                                "display"=> "Kelas Reguler"
-                                            ]
-                                        ]
-                                    ]
+                                                "system" => "http://terminology.kemkes.go.id/CodeSystem/locationServiceClass-Outpatient",
+                                                "code" => "reguler",
+                                                "display" => "Kelas Reguler",
+                                            ],
+                                        ],
+                                    ],
                                 ],
                                 [
-                                    "url"=> "upgradeClassIndicator",
-                                    "valueCodeableConcept"=> [
-                                        "coding"=> [
+                                    "url" => "upgradeClassIndicator",
+                                    "valueCodeableConcept" => [
+                                        "coding" => [
                                             [
-                                                "system"=> "http://terminology.kemkes.go.id/CodeSystem/locationUpgradeClass",
-                                                "code"=> "kelas-tetap",
-                                                "display"=> "Kelas Tetap Perawatan"
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
+                                                "system" => "http://terminology.kemkes.go.id/CodeSystem/locationUpgradeClass",
+                                                "code" => "kelas-tetap",
+                                                "display" => "Kelas Tetap Perawatan",
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
             ],
-            "statusHistory"=> [
+            "statusHistory" => [
                 [
-                    "status"=> "arrived",
-                    "period"=> [
-                        "start"=> "2023-08-31T00:00:00+00:00",
-                        "end"=> "2023-08-31T01:00:00+00:00"
-                    ]
+                    "status" => "arrived",
+                    "period" => [
+                        "start" => "2023-08-31T00:00:00+00:00",
+                        "end" => "2023-08-31T01:00:00+00:00",
+                    ],
                 ],
                 [
-                    "status"=> "in-progress",
-                    "period"=> [
-                        "start"=> "2023-08-31T01:00:00+00:00"
-                    ]
-                ]
+                    "status" => "in-progress",
+                    "period" => [
+                        "start" => "2023-08-31T01:00:00+00:00",
+                    ],
+                ],
             ],
-            "serviceProvider"=> [
-                "reference"=> "Organization/{{Org_ID}}"
-            ]
+            "serviceProvider" => [
+                "reference" => "Organization/{{Org_ID}}",
+            ],
         ];
 
         return $raw;
@@ -1001,7 +992,115 @@ class RajalService
 
             $url = ConfigSatuSehat::setUrl() . '/Encounter';
 
-            $bodyRaw = RajalService::encounterMasukRuangBody($body, $encounter_id);
+            $noreg = $body['noreg'];
+            $reg_tgl = RajalService::wibToUTC($body['reg_tgl']);
+            $location_id = $body['location_id'];
+            $location_name = $body['location_name'];
+            $patient_id = $body['patient_id'];
+            $patient_name = $body['patient_name'];
+            $practitioner_id = $body['practitioner_id'];
+            $practitioner_name = $body['practitioner_name'];
+
+            $bodyRaw = RajalService::encounterMasukRuangBody($encounter_id,$noreg, $reg_tgl, $location_id, $location_name, $patient_id, $patient_name, $practitioner_id, $practitioner_name);
+            // dd($bodyRaw);
+            // $jsonData = json_encode($bodyRaw, JSON_PRETTY_PRINT);
+
+            $httpClient = new Client(
+                [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $token,
+                    ],
+                    'json' => $bodyRaw,
+                ]
+            );
+
+            $response = $httpClient->post($url);
+            if ($response->getStatusCode() != 200) {
+                return null;
+            }
+            $data = $response->getBody()->getContents();
+
+            // return json_decode($data, true);
+            return $data['id'];
+        } catch (\Throwable $e) {
+            return null;
+            // dd($e->getMessage());
+        }
+    }
+
+    public static function conditionKeluhanUtamaBody($encounter_id, $noreg, $reg_tgl, $location_id, $location_name, $patient_id, $patient_name, $practitioner_id, $practitioner_name)
+    {
+       $raw = {
+        "resourceType": "Condition",
+        "clinicalStatus": {
+            "coding": [
+                {
+                    "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                    "code": "active",
+                    "display": "Active"
+                }
+            ]
+        },
+        "category": [
+            {
+                "coding": [
+                    {
+                        "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                        "code": "problem-list-item",
+                        "display": "Problem List Item"
+                    }
+                ]
+            }
+        ],
+        "code": {
+            "coding": [
+                {
+                    "system": "http://snomed.info/sct",
+                    "code": "16932000",
+                    "display": "Batuk darah"
+                }
+            ]
+        },
+        "subject": {
+            "reference": "Patient/{{Patient_ID}}",
+            "display": "{{Patient_Name}}"
+        },
+        "encounter": {
+            "reference": "Encounter/{{Encounter_id}}"
+        },
+        "onsetDateTime": "2023-02-02T00:00:00+00:00",
+        "recordedDate": "2023-08-31T01:00:00+00:00",
+        "recorder": {
+            "reference": "Practitioner/{{Practitioner_ID}}",
+            "display": "{{Practitioner_Name}}"
+        },
+        "note": [
+            {
+                "text": "Batuk Berdarah sejak 3bl yll"
+            }
+        ]
+    };
+
+        return $raw;
+    }
+
+    public static function conditionKeluhanUtama(array $body, $encounter_id)
+    {
+        try {
+            $token = AccessToken::token();
+
+            $url = ConfigSatuSehat::setUrl() . '/Condition';
+
+            $noreg = $body['noreg'];
+            $reg_tgl = RajalService::wibToUTC($body['reg_tgl']);
+            $location_id = $body['location_id'];
+            $location_name = $body['location_name'];
+            $patient_id = $body['patient_id'];
+            $patient_name = $body['patient_name'];
+            $practitioner_id = $body['practitioner_id'];
+            $practitioner_name = $body['practitioner_name'];
+
+            $bodyRaw = RajalService::encounterMasukRuangBody($encounter_id,$noreg, $reg_tgl, $location_id, $location_name, $patient_id, $patient_name, $practitioner_id, $practitioner_name);
             // dd($bodyRaw);
             // $jsonData = json_encode($bodyRaw, JSON_PRETTY_PRINT);
 

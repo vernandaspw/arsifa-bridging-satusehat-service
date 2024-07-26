@@ -652,6 +652,10 @@ class RajalBundleController extends Controller
                             $encounter_id = $encounterKunjunganBaru;
                             // jika success, kirim data langkah berikutnya
                             $encounterMasukRuang = RajalService::encounterMasukRuang($body, $encounter_id);
+                            if($encounterMasukRuang) {
+                                
+                                return $encounterMasukRuang;
+                            }
                             return $encounterKunjunganBaru;
                         }else{
                             return 'error';
