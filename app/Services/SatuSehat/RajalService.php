@@ -875,4 +875,156 @@ class RajalService
             // dd($e->getMessage());
         }
     }
+
+    public static function encounterMasukRuangBody(array $body, $encounter_id)
+    {
+        $noreg = $body['noreg'];
+        $reg_tgl = RajalService::wibToUTC($body['reg_tgl']);
+        $location_id = $body['location_id'];
+        $location_name = $body['location_name'];
+        $patient_id = $body['patient_id'];
+        $patient_name = $body['patient_name'];
+        $practitioner_id = $body['practitioner_id'];
+        $practitioner_name = $body['practitioner_name'];
+
+        $uuidEncounter = Str::uuid();
+
+        $raw = [
+            "resourceType"=> "Encounter",
+            "id"=> "{{Encounter_id}}",
+            "identifier"=> [
+                [
+                    "system"=> "http://sys-ids.kemkes.go.id/encounter/{{Org_ID}}",
+                    "value"=> "{{Encounter_Registration_ID}}"
+                ]
+            ],
+            "status"=> "in-progress",
+            "class"=> [
+                "system"=> "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+                "code"=> "AMB",
+                "display"=> "ambulatory"
+            ],
+            "subject"=> [
+                "reference"=> "Patient/{{Patient_ID}}",
+                "display"=> "{{Patient_Name}}"
+            ],
+            "participant"=> [
+                [
+                    "type"=> [
+                        [
+                            "coding"=> [
+                                [
+                                    "system"=> "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                                    "code"=> "ATND",
+                                    "display"=> "attender"
+                                ]
+                            ]
+                        ]
+                    ],
+                    "individual"=> [
+                        "reference"=> "Practitioner/{{Practitioner_ID}}",
+                        "display"=> "{{Practitioner_Name}}"
+                    ]
+                ]
+            ],
+            "period"=> [
+                "start"=> "2023-08-31T01:00:00+00:00"
+            ],
+            "location"=> [
+                [
+                    "location"=> [
+                        "reference"=> "Location/{{Location_Poli_id}}",
+                        "display"=> "{{Location_Poli_Name}}"
+                    ],
+                    "period"=> [
+                        "start"=> "2023-08-31T00:00:00+00:00"
+                    ],
+                    "extension"=> [
+                        [
+                            "url"=> "https://fhir.kemkes.go.id/r4/StructureDefinition/ServiceClass",
+                            "extension"=> [
+                                [
+                                    "url"=> "value",
+                                    "valueCodeableConcept"=> [
+                                        "coding"=> [
+                                            [
+                                                "system"=> "http://terminology.kemkes.go.id/CodeSystem/locationServiceClass-Outpatient",
+                                                "code"=> "reguler",
+                                                "display"=> "Kelas Reguler"
+                                            ]
+                                        ]
+                                    ]
+                                ],
+                                [
+                                    "url"=> "upgradeClassIndicator",
+                                    "valueCodeableConcept"=> [
+                                        "coding"=> [
+                                            [
+                                                "system"=> "http://terminology.kemkes.go.id/CodeSystem/locationUpgradeClass",
+                                                "code"=> "kelas-tetap",
+                                                "display"=> "Kelas Tetap Perawatan"
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            "statusHistory"=> [
+                [
+                    "status"=> "arrived",
+                    "period"=> [
+                        "start"=> "2023-08-31T00:00:00+00:00",
+                        "end"=> "2023-08-31T01:00:00+00:00"
+                    ]
+                ],
+                [
+                    "status"=> "in-progress",
+                    "period"=> [
+                        "start"=> "2023-08-31T01:00:00+00:00"
+                    ]
+                ]
+            ],
+            "serviceProvider"=> [
+                "reference"=> "Organization/{{Org_ID}}"
+            ]
+        ];
+
+        return $raw;
+    }
+    public static function encounterMasukRuang(array $body, $encounter_id)
+    {
+        try {
+            $token = AccessToken::token();
+
+            $url = ConfigSatuSehat::setUrl() . '/Encounter';
+
+            $bodyRaw = RajalService::encounterMasukRuangBody($body, $encounter_id);
+            // dd($bodyRaw);
+            // $jsonData = json_encode($bodyRaw, JSON_PRETTY_PRINT);
+
+            $httpClient = new Client(
+                [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $token,
+                    ],
+                    'json' => $bodyRaw,
+                ]
+            );
+
+            $response = $httpClient->post($url);
+            if ($response->getStatusCode() != 200) {
+                return null;
+            }
+            $data = $response->getBody()->getContents();
+
+            // return json_decode($data, true);
+            return $data['id'];
+        } catch (\Throwable $e) {
+            return null;
+            // dd($e->getMessage());
+        }
+    }
 }
