@@ -627,33 +627,37 @@ class RajalBundleController extends Controller
                 // practitioner_ihs
                 dd($reg);
 
-                // $body = [
-                //     'noreg' => $reg->noreg,
-                //     'patient_id' =>
-                //     'patient_name' => ,
+                $body = [
+                    'noreg' => $reg->noreg,
+                    // 'location_ihs' => $location_id,
+                    // 'location_nama' => $location_name,
 
-                //     'practitionerIhs' => $registration['ihs_dokter'],
-                //     'practitionerName' => $registration['nama_dokter'],
-                //     'organizationId' => $organization_id,
-                //     'locationId' => $location_id,
-                //     'locationName' => $location_name,
-                //     'statusHistory' => 'arrived',
-                //     'RegistrationDateTime' => $registration['RegistrationDateTime'],
-                //     'DischargeDateTime' => $registration['DischargeDateTime'],
-                //     'diagnosas' => $registration['diagnosas'],
-                // ];
+                    // 'patient_ihs' =>
+                    // 'patient_nama' => ,
+
+                    // 'practitioner_ihs' => $registration['ihs_dokter'],
+                    // 'practitioner_nama' => $registration['nama_dokter'],
+                    // 'organization_id' => $organization_id,
+                    // 'reg_tgl' => $registration['RegistrationDateTime'],
+                    // 'discharge_tgl' => $registration['DischargeDateTime'],
+                ];
 
                 if ($reg->encounter_id == null) {
                     // post baru
                     // post bundle encounter
-                        $body = ['aa' => 'aa'];
+
+                        $regUpdate = SatusehatRegEncounter::where('noreg', $reg->noreg)->first();
+
                         $encounterKunjunganBaru = RajalService::encounterKunjunganBaru($body);
                         if($encounterKunjunganBaru) {
+                            $regUpdate->is_kunjungan_pasien = true;
+                            $regUpdate->save();
                             $encounter_id = $encounterKunjunganBaru;
-                            // jika success, kirim data langkah berikutnya
+
                             $encounterMasukRuang = RajalService::encounterMasukRuang($body, $encounter_id);
                             if($encounterMasukRuang) {
-                                
+                                $regUpdate->is_kunjungan_pasien = true;
+                                $regUpdate->save();
                                 return $encounterMasukRuang;
                             }
                             return $encounterKunjunganBaru;
