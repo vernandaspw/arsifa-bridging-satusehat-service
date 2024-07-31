@@ -62,5 +62,5 @@ Route::get('rajal/get-ihs-patient/tanggal/{tanggal}', [RajalBundleController::cl
 // Route::get('rajal/get-ihs-practitioner/tanggal', [RajalBundleController::class, 'getIhsPractitionerTgl']);
 // Route::get('rajal/get-encounter-id/tanggal', [RajalBundleController::class, 'getEncounterIdTgl']);
 
-Route::post('rajal/encounter/tanggal/{tanggal}', [RajalBundleController::class, 'encounterPostPerTanggal']);
+Route::post('rajal/bundle/tanggal/{tanggal}', [RajalBundleController::class, 'rajalBundelPostPerTanggal']);
 

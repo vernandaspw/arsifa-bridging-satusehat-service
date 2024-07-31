@@ -2,9 +2,11 @@
 
 namespace App\Models\Satusehat;
 
-use Illuminate\Support\Str;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\RsRajal\RsRajalParamedic;
+use App\Models\RsRajal\RsRajalPasien;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class SatusehatRegEncounter extends Model
 {
@@ -21,4 +23,20 @@ class SatusehatRegEncounter extends Model
             $model->id = Str::uuid()->toString();
         });
     }
+
+    public function location()
+    {
+        return $this->belongsTo(SatusehatLocation::class, 'location_ihs', 'location_id');
+    }
+
+    public function rsrajal_patient()
+    {
+        return $this->belongsTo(RsRajalPasien::class, 'MedicalNo', 'MedicalNo');
+    }
+
+    public function rsrajal_practitioner()
+    {
+        return $this->belongsTo(RsRajalParamedic::class, 'practitioner_code', 'ParamedicCode');
+    }
+
 }
