@@ -10,627 +10,17 @@ use Illuminate\Support\Str;
 
 class RajalBundleService
 {
-    protected static function bodyPostEncounterCondition(array $body, $tipe)
-    {
-        $waktuWIB = date('Y-m-d\TH:i:sP', time());
-        $dateTimeWIB = new DateTime($waktuWIB);
-        $dateTimeWIB->modify("-7 hours");
-        $waktuUTC = $dateTimeWIB->format('Y-m-d\TH:i:sP');
-
-        $uuidEncounter = Str::uuid();
-
-        // diagnosis
-        $diagnosis = [];
-        $diagnosis_data = [];
-        $diagnosaUUID = Str::uuid();
-        if (!empty($body['diagnosas'])) {
-            // dd($body['diagnosas']);
-            foreach ($body['diagnosas'] as $indexDiagnosa => $diagnosa) {
-                $item_data = [
-                    'uuid' => $indexDiagnosa == 0 ? $diagnosaUUID : strval(Str::uuid()),
-                    "code" => $diagnosa['pdiag_diagnosa'] ? $diagnosa['pdiag_diagnosa'] : '-',
-                    'name' => '-',
-                ];
-                $diagnosis_data[] = $item_data;
-                $item = [
-                    "condition" => [
-                        "reference" => "urn:uuid:" . $item_data['uuid'],
-                        "display" => $diagnosa['pdiag_diagnosa'] ? $diagnosa['pdiag_diagnosa'] : '-',
-                    ],
-                    "use" => [
-                        "coding" => [
-                            [
-                                "system" => "http://terminology.hl7.org/CodeSystem/diagnosis-role",
-                                "code" => 'DD',
-                                "display" => "Discharge diagnosis",
-                            ],
-                        ],
-                    ],
-                    "rank" => $indexDiagnosa + 1,
-                ];
-                $diagnosis[] = $item;
-
-            }
-        }
-
-        if ($tipe == 'rajal') {
-            $actCode = 'AMB';
-            $actDisplay = 'ambulatory';
-        } elseif ($tipe == 'igd') {
-            $actCode = 'EMER';
-            $actDisplay = 'emergency';
-        } elseif ($tipe == 'ranap') {
-            $actCode = 'IMP';
-            $actDisplay = 'inpatient encounter';
-        }
-
-        $encounter = [
-            "fullUrl" => "urn:uuid:" . $uuidEncounter,
-            "resource" => [
-                "resourceType" => "Encounter",
-                "status" => "finished",
-                "class" => [
-                    "system" => "http://terminology.hl7.org/CodeSystem/v3-ActCode",
-                    "code" => $actCode,
-                    "display" => $actDisplay,
-                ],
-                "subject" => [
-                    "reference" => "Patient/" . $body['patientId'],
-                    "display" => $body['patientName'],
-                ],
-                "participant" => [
-                    [
-                        "type" => [
-                            [
-                                "coding" => [
-                                    [
-                                        "system" => "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
-                                        "code" => "ATND",
-                                        "display" => "attender",
-                                    ],
-                                ],
-                            ],
-                        ],
-                        "individual" => [
-                            "reference" => "Practitioner/" . $body['practitionerIhs'],
-                            "display" => $body['practitionerName'],
-                        ],
-                    ],
-                ],
-                "period" => [
-                    "start" => Carbon::createFromFormat('Y-m-d H:i:s.u', $body['RegistrationDateTime'])->setTimezone('UTC')->toIso8601String(),
-                    "end" => Carbon::createFromFormat('Y-m-d H:i:s.u', $body['DischargeDateTime'])->setTimezone('UTC')->toIso8601String(),
-                ],
-                "location" => [
-                    [
-                        "location" => [
-                            "reference" => "Location/" . $body['locationId'],
-                            "display" => $body['locationName'] ? $body['locationName'] : '-',
-                        ],
-                    ],
-                ],
-
-                "diagnosis" => $diagnosis,
-                "statusHistory" => [
-                    [
-                        "status" => "arrived",
-                        "period" => [
-                            "start" => Carbon::createFromFormat('Y-m-d H:i:s.u', $body['RegistrationDateTime'])->setTimezone('UTC')->toIso8601String(),
-                            "end" => Carbon::createFromFormat('Y-m-d H:i:s.u', $body['RegistrationDateTime'])->setTimezone('UTC')->toIso8601String(),
-                        ],
-                    ],
-                    [
-                        "status" => "in-progress",
-                        "period" => [
-                            "start" => Carbon::createFromFormat('Y-m-d H:i:s.u', $body['RegistrationDateTime'])->setTimezone('UTC')->toIso8601String(),
-                            "end" => Carbon::createFromFormat('Y-m-d H:i:s.u', $body['RegistrationDateTime'])->setTimezone('UTC')->toIso8601String(),
-                        ],
-                    ],
-                    [
-                        "status" => "finished",
-                        "period" => [
-                            "start" => Carbon::createFromFormat('Y-m-d H:i:s.u', $body['DischargeDateTime'])->setTimezone('UTC')->toIso8601String(),
-                            "end" => Carbon::createFromFormat('Y-m-d H:i:s.u', $body['DischargeDateTime'])->setTimezone('UTC')->toIso8601String(),
-                        ],
-                    ],
-                ],
-                "hospitalization" => [
-                    "dischargeDisposition" => [
-                        "coding" => [
-                            [
-                                "system" => "http://terminology.hl7.org/CodeSystem/discharge-disposition",
-                                "code" => "oth",
-                                "display" => "other-hcf",
-                            ],
-                        ],
-                        "text" => "Rujukan ke RSUD SITI FATIMAH dengan nomor rujukan",
-                    ],
-                ],
-                "serviceProvider" => [
-                    "reference" => "Organization/" . env('SATU_SEHAT_ORGANIZATION_ID'),
-                ],
-                "identifier" => [
-                    [
-                        "system" => "http://sys-ids.kemkes.go.id/encounter/" . env('SATU_SEHAT_ORGANIZATION_ID'),
-                        "value" => $body['kodeReg'],
-                    ],
-                ],
-            ],
-            "request" => [
-                "method" => "POST",
-                "url" => "Encounter",
-            ],
-        ];
-
-        // conditions
-        $conditions = [];
-        if (!empty($diagnosis) && !empty($diagnosis_data)) {
-            foreach ($diagnosis_data as $diagnosisItem) {
-                // dd($diagnosisItem);
-                $condition = [
-                    // "fullUrl" => "urn:uuid:" . substr($diagnosisItem['data']['condition']['reference'], strlen("urn:uuid:")),
-                    "fullUrl" => "urn:uuid:" . $diagnosisItem['uuid'],
-                    "resource" => [
-                        "resourceType" => "Condition",
-                        "clinicalStatus" => [
-                            "coding" => [
-                                [
-                                    "system" => "http://terminology.hl7.org/CodeSystem/condition-clinical",
-                                    "code" => "active",
-                                    "display" => "Active",
-                                ],
-                            ],
-                        ],
-                        "category" => [
-                            [
-                                "coding" => [
-                                    [
-                                        "system" => "http://terminology.hl7.org/CodeSystem/condition-category",
-                                        "code" => "encounter-diagnosis",
-                                        "display" => "Encounter Diagnosis",
-                                    ],
-                                ],
-                            ],
-                        ],
-                        "code" => [
-                            "coding" => [
-                                [
-                                    "system" => "http://hl7.org/fhir/sid/icd-10",
-                                    "code" => $diagnosisItem['code'],
-                                    "display" => $diagnosisItem['name'],
-                                ],
-                            ],
-                        ],
-                        "subject" => [
-                            "reference" => "Patient/" . $body['patientId'],
-                            "display" => $body['patientName'],
-                        ],
-                        "encounter" => [
-                            "reference" => "urn:uuid:" . $uuidEncounter,
-                            "display" => "Kunjungan " . $body['patientName'],
-                        ],
-                    ],
-                    "request" => [
-                        "method" => "POST",
-                        "url" => "Condition",
-                    ],
-                ];
-                $conditions[] = $condition;
-            }
-        }
-
-        $observationNadi = [];
-        if (!empty($body['observationNadi'])) {
-            $observationNadi =
-                [
-                "fullUrl" => "urn:uuid:" . Str::uuid(),
-                "resource" => [
-                    "resourceType" => "Observation",
-                    "status" => "final",
-                    "category" => [
-                        [
-                            "coding" => [
-                                [
-                                    "system" => "http://terminology.hl7.org/CodeSystem/observation-category",
-                                    "code" => "vital-signs",
-                                    "display" => "Vital Signs",
-                                ],
-                            ],
-                        ],
-                    ],
-                    "code" => [
-                        "coding" => [
-                            [
-                                "system" => "http://loinc.org",
-                                "code" => "8867-4",
-                                "display" => "Heart rate",
-                            ],
-                        ],
-                    ],
-                    "subject" => [
-                        "reference" => "Patient/" . $body['patientId'],
-                    ],
-                    "performer" => [
-                        [
-                            "reference" => "Practitioner/" . $body['practitionerIhs'],
-                        ],
-                    ],
-                    "encounter" => [
-                        "reference" => "urn:uuid:" . $uuidEncounter,
-                        "display" => "Pemeriksaan Fisik Nadi ",
-                    ],
-                    "effectiveDateTime" => $body['observationNadi']['date'] ? (DateTime::createFromFormat('Y-m-d H:i:s.u', $body['observationNadi']['date']))->setTimezone(new DateTimeZone('-07:00'))->format('Y-m-d\TH:i:sP') : '',
-                    "issued" => $body['observationNadi']['date'] ? (DateTime::createFromFormat('Y-m-d H:i:s.u', $body['observationNadi']['date']))->setTimezone(new DateTimeZone('-07:00'))->format('Y-m-d\TH:i:sP') : '',
-                    "valueQuantity" => [
-                        "value" => intval($body['observationNadi']['value']),
-                        "unit" => "beats/minute",
-                        "system" => "http://unitsofmeasure.org",
-                        "code" => "/min",
-                    ],
-                ],
-                "request" => [
-                    "method" => "POST",
-                    "url" => "Observation",
-                ],
-            ];
-        }
-        // dd($observationNadi);
-        $procedures = [];
-        if (!empty($body['procedures'])) {
-            foreach ($body['procedures'] as $key => $procedure) {
-                $procedures[] =
-                    [
-                    "fullUrl" => "urn:uuid:" . Str::uuid(),
-                    "resource" => [
-
-                        "resourceType" => "Procedure",
-                        "status" => "completed",
-                        "category" => [
-                            "coding" => [
-                                [
-                                    "system" => "http://snomed.info/sct",
-                                    "code" => "103693007",
-                                    "display" => "Diagnostic procedure",
-                                ],
-                            ],
-                            "text" => "Diagnostic procedure",
-                        ],
-                        "code" => [
-                            "coding" => [
-                                [
-                                    "system" => "http://hl7.org/fhir/sid/icd-9-cm",
-                                    "code" => $procedure['pprosedur_prosedur'],
-                                    "display" => "",
-                                ],
-                            ],
-                        ],
-                        "subject" => [
-                            "reference" => "Patient/" . $body['patientId'],
-                            "display" => $body['patientName'],
-                        ],
-                        "encounter" => [
-                            "reference" => "Encounter/" . $uuidEncounter,
-                            "display" => '',
-                        ],
-                        "performedPeriod" => [
-                            "start" => $procedure['created_at'] ? date_format(date_create_from_format('Y-m-d H:i:s.u', $procedure['created_at']), 'Y-m-d\TH:i:sP') : null,
-                            "end" => $procedure['created_at'] ? date_format(date_create_from_format('Y-m-d H:i:s.u', $procedure['created_at']), 'Y-m-d\TH:i:sP') : null,
-                        ],
-                        "performer" => [
-                            [
-                                "actor" => [
-                                    "reference" => "Practitioner/" . $body['practitionerIhs'],
-                                    "display" => $body['practitionerName'],
-                                ],
-                            ],
-                        ],
-                        "reasonCode" => [
-                            [
-                                "coding" => [
-                                    [
-                                        "system" => "http://hl7.org/fhir/sid/icd-10",
-                                        "code" => $body['diagnosa_utama']['pdiag_diagnosa'],
-                                        "display" => "",
-                                    ],
-                                ],
-                            ],
-                        ],
-                        "bodySite" => [
-                            [
-                                "coding" => [
-                                    [
-                                        "system" => "http://snomed.info/sct",
-                                        "code" => "302551006",
-                                        "display" => "Entire Thorax",
-                                    ],
-                                ],
-                            ],
-                        ],
-                        "note" => [
-                            [
-                                "text" => "",
-                            ],
-                        ],
-                    ],
-                    "request" => [
-                        "method" => "POST",
-                        "url" => "Procedure",
-                    ],
-                ];
-            }
-        }
-
-        $medications = [];
-        // if (!empty($body['medications'])) {
-        //     foreach ($body['medications'] as $medication) {
-        //         $racikan = $medication['temp_flag_racikan'] != 0 ? true : false;
-        //         $kfa = $medication['kfa'];
-        //         $itemCode = $medication['item_code'];
-        //         $itemName =  $medication['item_name'];
-        //     }
-        //     $medication_id = Str::uuid();
-        //     $medications = [
-        //         [
-        //             "fullUrl" => "urn:uuid:" . $medication_id,
-        //             "resource" => [
-        //                 "resourceType" => "Medication",
-        //                 "meta" => [
-        //                     "profile" => [
-        //                         "https://fhir.kemkes.go.id/r4/StructureDefinition/Medication",
-        //                     ],
-        //                 ],
-        //                 "extension" => [
-        //                     [
-        //                         "url" => "https://fhir.kemkes.go.id/r4/StructureDefinition/MedicationType",
-        //                         "valueCodeableConcept" => [
-        //                             "coding" => [
-        //                                 [
-        //                                     "system" => "http://terminology.kemkes.go.id/CodeSystem/medication-type",
-        //                                     "code" => "NC",
-        //                                     "display" => "Non-compound",
-        //                                 ],
-        //                             ],
-        //                         ],
-        //                     ],
-        //                 ],
-        //                 "identifier" => [
-        //                     [
-        //                         "use" => "official",
-        //                         "system" => "http://sys-ids.kemkes.go.id/medication/". env('SATU_SEHAT_ORGANIZATION_ID'),
-        //                         "value" => "123456789",
-        //                     ],
-        //                 ],
-        //                 "code" => [
-        //                     "coding" => [
-        //                         [
-        //                             "system" => "http://sys-ids.kemkes.go.id/kfa",
-        //                             "code" => "" . $racikan ? null : $kfa,
-        //                             "display" => $racikan ? null : $itemName,
-        //                         ],
-        //                     ],
-        //                 ],
-        //                 "status" => "active",
-        //                 "manufacturer" => [
-        //                     "reference" => "Organization/" . env('SATU_SEHAT_ORGANIZATION_ID'),
-        //                 ],
-        //                 "form" => [
-        //                     "coding" => [
-        //                         [
-        //                             "system" => "http://terminology.kemkes.go.id/CodeSystem/medication-form",
-        //                             "code" => $itemCode,
-        //                             "display" => $itemName,
-        //                         ],
-        //                     ],
-        //                 ],
-
-        //             ],
-        //             "request" => [
-        //                 "method" => "POST",
-        //                 "url" => "Medication",
-        //             ],
-        //         ],
-        //         [
-        //             "fullUrl" => "urn:uuid:". Str::uuid(),
-        //             "resource" => [
-        //                 "resourceType" => "MedicationRequest",
-        //                 "identifier" => [
-        //                     [
-        //                         "use" => "official",
-        //                         "system" => "http://sys-ids.kemkes.go.id/prescription/" . env('SATU_SEHAT_ORGANIZATION_ID'),
-        //                         "value" => "123456788",
-        //                     ],
-        //                     [
-        //                         "use" => "official",
-        //                         "system" => "http://sys-ids.kemkes.go.id/prescription-item/" . env('SATU_SEHAT_ORGANIZATION_ID'),
-        //                         "value" => "123456788-1",
-        //                     ],
-        //                 ],
-        //                 "status" => "completed",
-        //                 "intent" => "order",
-        //                 "category" => [
-        //                     [
-        //                         "coding" => [
-        //                             [
-        //                                 "system" => "http://terminology.hl7.org/CodeSystem/medicationrequest-category",
-        //                                 "code" => "outpatient",
-        //                                 "display" => "Outpatient",
-        //                             ],
-        //                         ],
-        //                     ],
-        //                 ],
-        //                 "priority" => "routine",
-        //                 "medicationReference" => [
-        //                     "reference" => "urn:uuid:" . $medication_id,
-        //                     "display" => $itemName,
-        //                 ],
-        //                 "subject" => [
-        //                     "reference" => "Patient/" .  $body['patientId'],
-        //                     "display" => $body['patientName'],
-        //                 ],
-        //                 "encounter" => [
-        //                     "reference" => "urn:uuid:". $uuidEncounter,
-        //                 ],
-        //                 "authoredOn" => $medication['created_at'],
-        //                 "requester" => [
-        //                     "reference" => "Practitioner/" .  $body['practitionerIhs'],
-        //                     "display" => $body['practitionerName'],
-        //                 ],
-        //                 "reasonReference" => [
-        //                     [
-        //                         "reference" => "urn:uuid:{{Condition_DiagnosisPrimer}}",
-        //                         "display" => "{{DiagnosisPrimer_Text}}",
-        //                     ],
-        //                 ],
-        //                 "courseOfTherapyType" => [
-        //                     "coding" => [
-        //                         [
-        //                             "system" => "http://terminology.hl7.org/CodeSystem/medicationrequest-course-of-therapy",
-        //                             "code" => "continuous",
-        //                             "display" => "Continuing long term therapy",
-        //                         ],
-        //                     ],
-        //                 ],
-        //                 "dosageInstruction" => [
-        //                     [
-        //                         "sequence" => 1,
-        //                         "additionalInstruction" => [
-        //                             [
-        //                                 "coding" => [
-        //                                     [
-        //                                         "system" => "http://snomed.info/sct",
-        //                                         "code" => "418577003",
-        //                                         "display" => "Take at regular intervals. Complete the prescribed course unless otherwise directed",
-        //                                     ],
-        //                                 ],
-        //                             ],
-        //                         ],
-        //                         "patientInstruction" => "4 tablet perhari, diminum setiap hari tanpa jeda sampai prose pengobatan berakhir",
-        //                         "timing" => [
-        //                             "repeat" => [
-        //                                 "frequency" => 1,
-        //                                 "period" => 1,
-        //                                 "periodUnit" => "d",
-        //                             ],
-        //                         ],
-        //                         "route" => [
-        //                             "coding" => [
-        //                                 [
-        //                                     "system" => "http://www.whocc.no/atc",
-        //                                     "code" => "O",
-        //                                     "display" => "Oral",
-        //                                 ],
-        //                             ],
-        //                         ],
-        //                         "doseAndRate" => [
-        //                             [
-        //                                 "type" => [
-        //                                     "coding" => [
-        //                                         [
-        //                                             "system" => "http://terminology.hl7.org/CodeSystem/dose-rate-type",
-        //                                             "code" => "ordered",
-        //                                             "display" => "Ordered",
-        //                                         ],
-        //                                     ],
-        //                                 ],
-        //                                 "doseQuantity" => [
-        //                                     "value" => 4,
-        //                                     "unit" => "TAB",
-        //                                     "system" => "http://terminology.hl7.org/CodeSystem/v3-orderableDrugForm",
-        //                                     "code" => "TAB",
-        //                                 ],
-        //                             ],
-        //                         ],
-        //                     ],
-        //                 ],
-        //                 "dispenseRequest" => [
-        //                     "dispenseInterval" => [
-        //                         "value" => 1,
-        //                         "unit" => "days",
-        //                         "system" => "http://unitsofmeasure.org",
-        //                         "code" => "d",
-        //                     ],
-        //                     "validityPeriod" => [
-        //                         "start" => "2023-08-31T03:27:00+00:00",
-        //                         "end" => "2024-07-22T14:27:00+00:00",
-        //                     ],
-        //                     "numberOfRepeatsAllowed" => 0,
-        //                     "quantity" => [
-        //                         "value" => 120,
-        //                         "unit" => "TAB",
-        //                         "system" => "http://terminology.hl7.org/CodeSystem/v3-orderableDrugForm",
-        //                         "code" => "TAB",
-        //                     ],
-        //                     "expectedSupplyDuration" => [
-        //                         "value" => 30,
-        //                         "unit" => "days",
-        //                         "system" => "http://unitsofmeasure.org",
-        //                         "code" => "d",
-        //                     ],
-        //                     "performer" => [
-        //                         "reference" => "Organization/{{Org_ID}}",
-        //                     ],
-        //                 ],
-        //             ],
-        //             "request" => [
-        //                 "method" => "POST",
-        //                 "url" => "MedicationRequest",
-        //             ],
-        //         ],
-        //     ];
-        // }
-        $data = [
-            "resourceType" => "Bundle",
-            "type" => "transaction",
-            "entry" =>
-            array_merge([$encounter],
-                $conditions,
-                !empty($observationNadi) ? [$observationNadi] : [],
-                $procedures,
-                // $medications
-            ),
-        ];
-        // dd($data);
-
-        return $data;
-    }
-
-    public static function PostEncounterCondition(array $body, $tipe)
-    {
-        try {
-            $token = AccessToken::token();
-
-            $url = ConfigSatuSehat::setUrl();
-
-            $bodyRaw = self::bodyPostEncounterCondition($body, $tipe);
-            // dd($bodyRaw);
-            // $jsonData = json_encode($bodyRaw, JSON_PRETTY_PRINT);
-
-            $httpClient = new Client(
-                [
-                    'headers' => [
-                        'Authorization' => 'Bearer ' . $token,
-                    ],
-                    'json' => $bodyRaw,
-                ]
-            );
-            $response = $httpClient->post($url);
-            if ($response->getStatusCode() != 200) {
-                return null;
-            }
-            $data = $response->getBody()->getContents();
-            return json_decode($data, true);
-        } catch (\Throwable $e) {
-            return null;
-            // dd($e->getMessage());
-        }
-    }
 
     public static function wibToUTC($waktuWIB)
     {
-        $dateTimeWIB = new DateTime($waktuWIB);
-        $dateTimeWIB->modify("-7 hours");
-        $waktuUTC = $dateTimeWIB->format('Y-m-d\TH:i:sP');
-        return $waktuUTC;
+        // $dateTimeWIB = new DateTime($waktuWIB);
+        // $dateTimeWIB->modify("-7 hours");
+        // $waktuUTC = $dateTimeWIB->format('Y-m-d\TH:i:sP');
+
+        $date = new DateTime($waktuWIB);
+        $date->modify('-7 hours'); // Mengurangi 7 jam
+        return $date->format('Y-m-d\TH:i:sP');
+        // return $waktuUTC;
     }
 
     public static function rajalBundleBody(
@@ -645,14 +35,18 @@ class RajalBundleService
         $patient_ihs,
         $patient_nama,
 
-        $practitioner_id,
+        $practitioner_ihs,
         $practitioner_nama,
 
-        $org_id
-    ) {
-        
+        $org_id,
 
-        $diagnosis = [
+        $asper_nadi,
+        $asper_created_at
+    ) {
+        // dd($reg_tgl, RajalBundleService::wibToUTC($reg_tgl));
+        $reg_tgl = RajalBundleService::wibToUTC($reg_tgl);
+        $encounter_diagnosis = [];
+        $encounter_diagnosis = [
             [
                 "condition" => [
                     "reference" => "urn:uuid:{{Condition_DiagnosisPrimer}}",
@@ -687,141 +81,300 @@ class RajalBundleService
             ],
         ];
 
-        $bundle = [
-            "resourceType" => "Bundle",
-            "type" => "transaction",
-            "entry" => [
-                [
-                    "fullUrl" => "urn:uuid:" . $encounter_id,
-                    "resource" => [
-                        "resourceType" => "Encounter",
-                        "identifier" => [
-                            [
-                                "system" => "http://sys-ids.kemkes.go.id/encounter/" . $org_id,
-                                "value" => $noreg,
-                            ],
+        $encounter = [
+            "fullUrl" => "urn:uuid:" . $encounter_id,
+            "resource" => [
+                "resourceType" => "Encounter",
+                "identifier" => [
+                    [
+                        "system" => "http://sys-ids.kemkes.go.id/encounter/" . $org_id,
+                        "value" => $noreg,
+                    ],
+                ],
+                "status" => "finished",
+                "statusHistory" => [
+                    [
+                        "status" => "arrived",
+                        "period" => [
+                            "start" => $reg_tgl,
+                            "end" => $reg_tgl,
                         ],
+                    ],
+                    [
+                        "status" => "in-progress",
+                        "period" => [
+                            "start" => $reg_tgl,
+                            "end" => $reg_tgl,
+                        ],
+                    ],
+                    [
                         "status" => "finished",
-                        "statusHistory" => [
-                            [
-                                "status" => "arrived",
-                                "period" => [
-                                    "start" => $reg_tgl,
-                                    "end" => $reg_tgl,
-                                ],
-                            ],
-                            [
-                                "status" => "in-progress",
-                                "period" => [
-                                    "start" => $reg_tgl,
-                                    "end" => $reg_tgl,
-                                ],
-                            ],
-                            [
-                                "status" => "finished",
-                                "period" => [
-                                    "start" => $discharge_tgl,
-                                    "end" => $discharge_tgl,
-                                ],
-                            ],
+                        "period" => [
+                            "start" => $discharge_tgl,
+                            "end" => $discharge_tgl,
                         ],
-                        "class" => [
-                            "system" => "http://terminology.hl7.org/CodeSystem/v3-ActCode",
-                            "code" => "AMB",
-                            "display" => "ambulatory",
-                        ],
-                        "subject" => [
-                            "reference" => "Patient/" . $patient_ihs,
-                            "display" => $patient_nama,
-                        ],
-                        "participant" => [
+                    ],
+                ],
+                "class" => [
+                    "system" => "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+                    "code" => "AMB",
+                    "display" => "ambulatory",
+                ],
+                "subject" => [
+                    "reference" => "Patient/" . $patient_ihs,
+                    "display" => $patient_nama,
+                ],
+                "participant" => [
+                    [
+                        "type" => [
                             [
-                                "type" => [
+                                "coding" => [
                                     [
-                                        "coding" => [
-                                            [
-                                                "system" => "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
-                                                "code" => "ATND",
-                                                "display" => "attender",
+                                        "system" => "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+                                        "code" => "ATND",
+                                        "display" => "attender",
+                                    ],
+                                ],
+                            ],
+                        ],
+                        "individual" => [
+                            "reference" => "Practitioner/" . $practitioner_ihs,
+                            "display" => $practitioner_nama,
+                        ],
+                    ],
+                ],
+                "period" => [
+                    "start" => $reg_tgl,
+                    "end" => $reg_tgl,
+                ],
+                "diagnosis" => $encounter_diagnosis,
+                "hospitalization" => [
+                    "dischargeDisposition" => [
+                        "coding" => [
+                            [
+                                "system" => "http://terminology.hl7.org/CodeSystem/discharge-disposition",
+                                "code" => "oth",
+                                "display" => "other-hcf",
+                            ],
+                        ],
+                        "text" => "",
+                    ],
+                ],
+                "location" => [
+                    [
+                        "extension" => [
+                            [
+                                "extension" => [
+                                    [
+                                        "url" => "value",
+                                        "valueCodeableConcept" => [
+                                            "coding" => [
+                                                [
+                                                    "system" => "http://terminology.kemkes.go.id/CodeSystem/locationServiceClass-Outpatient",
+                                                    "code" => "reguler",
+                                                    "display" => "Kelas Reguler",
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                    [
+                                        "url" => "upgradeClassIndicator",
+                                        "valueCodeableConcept" => [
+                                            "coding" => [
+                                                [
+                                                    "system" => "http://terminology.kemkes.go.id/CodeSystem/locationUpgradeClass",
+                                                    "code" => "kelas-tetap",
+                                                    "display" => "Kelas Tetap Perawatan",
+                                                ],
                                             ],
                                         ],
                                     ],
                                 ],
-                                "individual" => [
-                                    "reference" => "Practitioner/" . $practitioner_id,
-                                    "display" => $practitioner_nama,
-                                ],
+                                "url" => "https://fhir.kemkes.go.id/r4/StructureDefinition/ServiceClass",
                             ],
+                        ],
+                        "location" => [
+                            "reference" => "Location/" . $location_ihs,
+                            "display" => $location_nama,
                         ],
                         "period" => [
                             "start" => $reg_tgl,
                             "end" => $reg_tgl,
                         ],
-                        "diagnosis" => $diagnosis,
-                        "hospitalization" => [
-                            "dischargeDisposition" => [
-                                "coding" => [
-                                    [
-                                        "system" => "http://terminology.hl7.org/CodeSystem/discharge-disposition",
-                                        "code" => "oth",
-                                        "display" => "other-hcf",
-                                    ],
-                                ],
-                                "text" => "",
-                            ],
-                        ],
-                        "location" => [
-                            [
-                                "extension" => [
-                                    [
-                                        "extension" => [
-                                            [
-                                                "url" => "value",
-                                                "valueCodeableConcept" => [
-                                                    "coding" => [
-                                                        [
-                                                            "system" => "http://terminology.kemkes.go.id/CodeSystem/locationServiceClass-Outpatient",
-                                                            "code" => "reguler",
-                                                            "display" => "Kelas Reguler",
-                                                        ],
-                                                    ],
-                                                ],
-                                            ],
-                                            [
-                                                "url" => "upgradeClassIndicator",
-                                                "valueCodeableConcept" => [
-                                                    "coding" => [
-                                                        [
-                                                            "system" => "http://terminology.kemkes.go.id/CodeSystem/locationUpgradeClass",
-                                                            "code" => "kelas-tetap",
-                                                            "display" => "Kelas Tetap Perawatan",
-                                                        ],
-                                                    ],
-                                                ],
-                                            ],
-                                        ],
-                                        "url" => "https://fhir.kemkes.go.id/r4/StructureDefinition/ServiceClass",
-                                    ],
-                                ],
-                                "location" => [
-                                    "reference" => "Location/" . $location_ihs,
-                                    "display" => $location_nama,
-                                ],
-                                "period" => [
-                                    "start" => $reg_tgl,
-                                    "end" => $reg_tgl,
-                                ],
-                            ],
-                        ],
-                        "serviceProvider" => [
-                            "reference" => "Organization/" . $org_id,
-                        ],
-                    ],
-                    "request" => [
-                        "method" => "POST",
-                        "url" => "Encounter",
                     ],
                 ],
+                "serviceProvider" => [
+                    "reference" => "Organization/" . $org_id,
+                ],
+            ],
+            "request" => [
+                "method" => "POST",
+                "url" => "Encounter",
+            ],
+        ];
+
+        $obervation_nadi = [];
+        if (!empty($asper_nadi)) {
+            $observation_nadi = [
+                "fullUrl" => "urn:uuid:" . Str::uuid(),
+                "resource" => [
+                    "resourceType" => "Observation",
+                    "status" => "final",
+                    "category" => [
+                        [
+                            "coding" => [
+                                [
+                                    "system" => "http://terminology.hl7.org/CodeSystem/observation-category",
+                                    "code" => "vital-signs",
+                                    "display" => "Vital Signs",
+                                ],
+                            ],
+                        ],
+                    ],
+                    "code" => [
+                        "coding" => [
+                            [
+                                "system" => "http://loinc.org",
+                                "code" => "8867-4",
+                                "display" => "Heart rate",
+                            ],
+                        ],
+                    ],
+                    "subject" => [
+                        "reference" => "Patient/" . $patient_ihs,
+                        "display" => $patient_nama,
+                    ],
+                    "encounter" => [
+                        "reference" => "urn:uuid:" . $encounter_id,
+                    ],
+                    "effectiveDateTime" => $asper_created_at,
+                    "issued" => $asper_created_at,
+                    "performer" => [
+                        [
+                            "reference" => "Practitioner/" . $practitioner_ihs,
+                            "display" => $practitioner_nama,
+                        ],
+                    ],
+                    "valueQuantity" => [
+                        "value" => $asper_nadi,
+                        "unit" => "{beats}/min",
+                        "system" => "http://unitsofmeasure.org",
+                        "code" => "{beats}/min",
+                    ],
+                ],
+                "request" => [
+                    "method" => "POST",
+                    "url" => "Observation",
+                ],
+            ];
+        }
+
+        $conditions = [];
+        $conditions = [
+            [
+                "fullUrl" => "urn:uuid:{{Condition_DiagnosisPrimer}}",
+                "resource" => [
+                    "resourceType" => "Condition",
+                    "clinicalStatus" => [
+                        "coding" => [
+                            [
+                                "system" => "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                                "code" => "active",
+                                "display" => "Active",
+                            ],
+                        ],
+                    ],
+                    "category" => [
+                        [
+                            "coding" => [
+                                [
+                                    "system" => "http://terminology.hl7.org/CodeSystem/condition-category",
+                                    "code" => "encounter-diagnosis",
+                                    "display" => "Encounter Diagnosis",
+                                ],
+                            ],
+                        ],
+                    ],
+                    "code" => [
+                        "coding" => [
+                            [
+                                "system" => "http://hl7.org/fhir/sid/icd-10",
+                                "code" => "A15.0",
+                                "display" => "Tuberculosis of lung, confirmed by sputum microscopy with or without culture",
+                            ],
+                        ],
+                    ],
+                    "subject" => [
+                        "reference" => "Patient/{{Patient_ID}}",
+                        "display" => "{{Patient_Name}}",
+                    ],
+                    "encounter" => [
+                        "reference" => "urn:uuid:{{Encounter_id}}",
+                    ],
+                    "onsetDateTime" => "2023-08-31T04:10:00+00:00",
+                    "recordedDate" => "2023-08-31T04:10:00+00:00",
+                ],
+                "request" => [
+                    "method" => "POST",
+                    "url" => "Condition",
+                ],
+            ],
+            [
+                "fullUrl" => "urn:uuid:{{Condition_DiagnosisSekunder}}",
+                "resource" => [
+                    "resourceType" => "Condition",
+                    "clinicalStatus" => [
+                        "coding" => [
+                            [
+                                "system" => "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                                "code" => "active",
+                                "display" => "Active",
+                            ],
+                        ],
+                    ],
+                    "category" => [
+                        [
+                            "coding" => [
+                                [
+                                    "system" => "http://terminology.hl7.org/CodeSystem/condition-category",
+                                    "code" => "encounter-diagnosis",
+                                    "display" => "Encounter Diagnosis",
+                                ],
+                            ],
+                        ],
+                    ],
+                    "code" => [
+                        "coding" => [
+                            [
+                                "system" => "http://hl7.org/fhir/sid/icd-10",
+                                "code" => "E11.9",
+                                "display" => "Type 2 diabetes mellitus, Type 2 diabetes mellitus",
+                            ],
+                        ],
+                    ],
+                    "subject" => [
+                        "reference" => "Patient/{{Patient_ID}}",
+                        "display" => "{{Patient_Name}}",
+                    ],
+                    "encounter" => [
+                        "reference" => "urn:uuid:{{Encounter_id}}",
+                        "display" => "Kunjungan {{Patient_Name}} di hari Kamis, 31 Agustus 2023",
+                    ],
+                    "onsetDateTime" => "2023-08-31T04:10:00+00:00",
+                    "recordedDate" => "2023-08-31T04:10:00+00:00",
+                ],
+                "request" => [
+                    "method" => "POST",
+                    "url" => "Condition",
+                ],
+            ],
+        ];
+
+        $bundle = [
+            "resourceType" => "Bundle",
+            "type" => "transaction",
+            "entry" => [
+                $encounter,
                 // [
                 //     "fullUrl" => "urn:uuid:c566d6e2-4da0-4895-9bcb-8051dd16548c",
                 //     "resource" => [
@@ -879,58 +432,9 @@ class RajalBundleService
                 //         "url" => "Condition",
                 //     ],
                 // ],
-                [
-                    "fullUrl" => "urn:uuid:" . Str::uuid(),
-                    "resource" => [
-                        "resourceType" => "Observation",
-                        "status" => "final",
-                        "category" => [
-                            [
-                                "coding" => [
-                                    [
-                                        "system" => "http://terminology.hl7.org/CodeSystem/observation-category",
-                                        "code" => "vital-signs",
-                                        "display" => "Vital Signs",
-                                    ],
-                                ],
-                            ],
-                        ],
-                        "code" => [
-                            "coding" => [
-                                [
-                                    "system" => "http://loinc.org",
-                                    "code" => "8867-4",
-                                    "display" => "Heart rate",
-                                ],
-                            ],
-                        ],
-                        "subject" => [
-                            "reference" => "Patient/" . $patient_ihs,
-                            "display" => $patient_nama,
-                        ],
-                        "encounter" => [
-                            "reference" => "urn:uuid:{{Encounter_id}}",
-                        ],
-                        "effectiveDateTime" => "2023-08-31T01:10:00+00:00",
-                        "issued" => "2023-08-31T01:10:00+00:00",
-                        "performer" => [
-                            [
-                                "reference" => "Practitioner/{{Practitioner_ID}}",
-                                "display" => "{{Practitioner_Name}}",
-                            ],
-                        ],
-                        "valueQuantity" => [
-                            "value" => 80,
-                            "unit" => "{beats}/min",
-                            "system" => "http://unitsofmeasure.org",
-                            "code" => "{beats}/min",
-                        ],
-                    ],
-                    "request" => [
-                        "method" => "POST",
-                        "url" => "Observation",
-                    ],
-                ],
+
+                $observation_nadi,
+
                 // {
                 //     "fullUrl": "urn:uuid:{{Observation_Kesadaran}}",
                 //     "resource": {
@@ -1597,103 +1101,7 @@ class RajalBundleService
                 //         "url": "Procedure"
                 //     }
                 // },
-                // {
-                //     "fullUrl": "urn:uuid:{{Condition_DiagnosisPrimer}}",
-                //     "resource": {
-                //         "resourceType": "Condition",
-                //         "clinicalStatus": {
-                //             "coding": [
-                //                 {
-                //                     "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
-                //                     "code": "active",
-                //                     "display": "Active"
-                //                 }
-                //             ]
-                //         },
-                //         "category": [
-                //             {
-                //                 "coding": [
-                //                     {
-                //                         "system": "http://terminology.hl7.org/CodeSystem/condition-category",
-                //                         "code": "encounter-diagnosis",
-                //                         "display": "Encounter Diagnosis"
-                //                     }
-                //                 ]
-                //             }
-                //         ],
-                //         "code": {
-                //             "coding": [
-                //                 {
-                //                     "system": "http://hl7.org/fhir/sid/icd-10",
-                //                     "code": "A15.0",
-                //                     "display": "Tuberculosis of lung, confirmed by sputum microscopy with or without culture"
-                //                 }
-                //             ]
-                //         },
-                //         "subject": {
-                //             "reference": "Patient/{{Patient_ID}}",
-                //             "display": "{{Patient_Name}}"
-                //         },
-                //         "encounter": {
-                //             "reference": "urn:uuid:{{Encounter_id}}"
-                //         },
-                //         "onsetDateTime": "2023-08-31T04:10:00+00:00",
-                //         "recordedDate": "2023-08-31T04:10:00+00:00"
-                //     },
-                //     "request": {
-                //         "method": "POST",
-                //         "url": "Condition"
-                //     }
-                // },
-                // {
-                //     "fullUrl": "urn:uuid:{{Condition_DiagnosisSekunder}}",
-                //     "resource": {
-                //         "resourceType": "Condition",
-                //         "clinicalStatus": {
-                //             "coding": [
-                //                 {
-                //                     "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
-                //                     "code": "active",
-                //                     "display": "Active"
-                //                 }
-                //             ]
-                //         },
-                //         "category": [
-                //             {
-                //                 "coding": [
-                //                     {
-                //                         "system": "http://terminology.hl7.org/CodeSystem/condition-category",
-                //                         "code": "encounter-diagnosis",
-                //                         "display": "Encounter Diagnosis"
-                //                     }
-                //                 ]
-                //             }
-                //         ],
-                //         "code": {
-                //             "coding": [
-                //                 {
-                //                     "system": "http://hl7.org/fhir/sid/icd-10",
-                //                     "code": "E11.9",
-                //                     "display": "Type 2 diabetes mellitus, Type 2 diabetes mellitus"
-                //                 }
-                //             ]
-                //         },
-                //         "subject": {
-                //             "reference": "Patient/{{Patient_ID}}",
-                //             "display": "{{Patient_Name}}"
-                //         },
-                //         "encounter": {
-                //             "reference": "urn:uuid:{{Encounter_id}}",
-                //             "display": "Kunjungan {{Patient_Name}} di hari Kamis, 31 Agustus 2023"
-                //         },
-                //         "onsetDateTime": "2023-08-31T04:10:00+00:00",
-                //         "recordedDate": "2023-08-31T04:10:00+00:00"
-                //     },
-                //     "request": {
-                //         "method": "POST",
-                //         "url": "Condition"
-                //     }
-                // },
+                $conditions,
                 // {
                 //     "fullUrl": "urn:uuid:{{Procedure_Edukasi}}",
                 //     "resource": {
@@ -2759,7 +2167,7 @@ class RajalBundleService
         try {
 
             $token = AccessToken::token();
-            $url = ConfigSatuSehat::setUrl() . '/Encounter';
+            $url = ConfigSatuSehat::setUrl();
 
             $encounter_id = Str::uuid();
 
@@ -2778,6 +2186,9 @@ class RajalBundleService
 
             $org_id = $body['org_id'];
 
+            $asper_nadi = $body['asper']['nadi'];
+            $asper_created_at = $body['asper']['created_at'];
+
             // dd($body);
             $bodyRaw = RajalBundleService::rajalBundleBody(
                 $encounter_id,
@@ -2790,7 +2201,9 @@ class RajalBundleService
                 $patient_nama,
                 $practitioner_ihs,
                 $practitioner_nama,
-                $org_id
+                $org_id,
+                $asper_nadi,
+                $asper_created_at
             );
             dd($bodyRaw);
             // $jsonData = json_encode($bodyRaw, JSON_PRETTY_PRINT);
@@ -2813,8 +2226,8 @@ class RajalBundleService
             // return json_decode($data, true);
             return $data['id'];
         } catch (\Throwable $e) {
-            return null;
-            // dd($e->getMessage());
+            // return null;
+            dd($e->getMessage());
         }
     }
 }

@@ -10,7 +10,6 @@ use App\Models\Satusehat\SatusehatPractitioner;
 use App\Models\Satusehat\SatusehatRegEncounter;
 use App\Services\SatuSehat\PatientService;
 use App\Services\SatuSehat\RajalBundleService;
-use App\Services\SatuSehat\RajalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -595,9 +594,7 @@ class RajalBundleController extends Controller
                 'msg' => 'tanggal wajib di isi',
             ], 400);
         }
-
     }
-
     public static function rajalBundelPostPerTanggal($tanggal)
     {
         $tipe = 'rajal';
@@ -630,6 +627,15 @@ class RajalBundleController extends Controller
                 // practitioner_ihs
                 // dd($reg);
 
+                if ($reg->rsrajal_asper) {
+                    $asper = [
+                        'nadi' => filter_var($reg->rsrajal_asper->asper_nadi, FILTER_SANITIZE_NUMBER_INT),
+                        'created_at' => $reg->rsrajal_asper->created_at,
+                    ];
+                } else {
+                    $asper = null;
+                }
+
                 $body = [
                     'noreg' => $reg->noreg,
                     'reg_tgl' => $reg->reg_tgl,
@@ -644,6 +650,7 @@ class RajalBundleController extends Controller
                     'practitioner_ihs' => $reg->practitioner_ihs,
                     'practitioner_nama' => $reg->rsrajal_practitioner->ParamedicName,
                     'org_id' => env('SATU_SEHAT_ORGANIZATION_ID'),
+                    'asper' => $asper,
 
                 ];
                 // dd($body);
@@ -654,8 +661,6 @@ class RajalBundleController extends Controller
                 if ($reg->encounter_id == null) {
                     // post baru
                     // post bundle encounter
-
-
 
                     // $encounterKunjunganBaru = RajalService::encounterKunjunganBaru($body);
                     // if ($encounterKunjunganBaru) {
@@ -691,13 +696,14 @@ class RajalBundleController extends Controller
                     // $this->fetchData($this->tanggal);
 
                 }
-                // else {
-                //     // perbaui, nanti
-                //     // cek data apa saja yg telah dikirim
-
-                //     //
-                // }
             }
+            // else {
+            //     // perbaui, nanti
+            //     // cek data apa saja yg telah dikirim
+
+            //     //
+            // }
+
             // return response()->json($regs);
 
             return response()->json([
