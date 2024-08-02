@@ -2,9 +2,7 @@
 
 namespace App\Services\SatuSehat;
 
-use Carbon\Carbon;
 use DateTime;
-use DateTimeZone;
 use GuzzleHttp\Client;
 use Illuminate\Support\Str;
 
@@ -41,10 +39,17 @@ class RajalBundleService
         $org_id,
 
         $asper_nadi,
-        $asper_created_at
+        $asper_created_at,
+
+        $diagnosa_primary,
+        $diagnosa_secondary,
+        $diagnosas,
+        $prosedurs
     ) {
         // dd($reg_tgl, RajalBundleService::wibToUTC($reg_tgl));
         $reg_tgl = RajalBundleService::wibToUTC($reg_tgl);
+        $discharge_tgl = RajalBundleService::wibToUTC($discharge_tgl);
+        // dd($diagnosas);
         $encounter_diagnosis = [];
         $encounter_diagnosis = [
             [
@@ -2188,6 +2193,10 @@ class RajalBundleService
 
             $asper_nadi = $body['asper']['nadi'];
             $asper_created_at = $body['asper']['created_at'];
+            $diagnosa_primary = $body['diagnosa_primary'];
+            $diagnosa_secondary = $body['diagnosa_secondary'];
+            $diagnosas = $body['diagnosas'];
+            $prosedurs = $body['prosedurs'];
 
             // dd($body);
             $bodyRaw = RajalBundleService::rajalBundleBody(
@@ -2203,7 +2212,11 @@ class RajalBundleService
                 $practitioner_nama,
                 $org_id,
                 $asper_nadi,
-                $asper_created_at
+                $asper_created_at,
+                $diagnosa_primary,
+                $diagnosa_secondary,
+                $diagnosas,
+                $prosedurs
             );
             dd($bodyRaw);
             // $jsonData = json_encode($bodyRaw, JSON_PRETTY_PRINT);

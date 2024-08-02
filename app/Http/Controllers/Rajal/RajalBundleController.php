@@ -636,6 +636,58 @@ class RajalBundleController extends Controller
                     $asper = null;
                 }
 
+                // $diagnosas = $reg->rsrajal_diagnosas;
+
+                $get_diagnosas = $reg->rsrajal_diagnosas->toArray();
+                $collection_diagnosas = collect($get_diagnosas);
+                $grouped_diagnosas = $collection_diagnosas->groupBy('pdiag_diagnosa');
+                $merged_diagnosa = $grouped_diagnosas->map(function ($item) {
+                    return [
+                        'pdiag_id' => $item->first()['pdiag_id'],
+                        'pdiag_reg' => $item->first()['pdiag_reg'],
+                        'pdiag_diagnosa' => $item->first()['pdiag_diagnosa'],
+                        'pdiag_status' => $item->first()['pdiag_status'],
+                        'pdiag_tipe' => $item->first()['pdiag_tipe'],
+                        'pdiag_old_case' => $item->first()['pdiag_old_case'],
+                        'pdiag_chronicity' => $item->first()['pdiag_chronicity'],
+                        'pdiag_masalah' => $item->first()['pdiag_masalah'],
+                        'pdiag_catatan' => $item->first()['pdiag_catatan'],
+                        'pdiag_dokter' => $item->first()['pdiag_dokter'],
+                        'pdiag_deleted' => $item->first()['pdiag_deleted'],
+                        'created_at' => $item->first()['created_at'],
+                        'updated_at' => $item->first()['updated_at'],
+                    ];
+                });
+                $diagnosas = $merged_diagnosa->values()->all();
+
+                $diagnosa_secondary = [];
+                foreach ($diagnosas as $merged_diagnosa) {
+                    if ($merged_diagnosa['pdiag_tipe'] == 'UTAMA') {
+                        $diagnosa_primary = $merged_diagnosa;
+                    } else {
+                        $diagnosa_secondary[] = $merged_diagnosa;
+                    }
+                }
+
+                // PROSEDUR
+                $get_prosedurs = $reg->rsrajal_prosedurs->toArray();
+                $collection_prosedurs = collect($get_prosedurs);
+                $grouped_prosedurs = $collection_prosedurs->groupBy('pprosedur_prosedur');
+                $merged_prosedur = $grouped_prosedurs->map(function ($item) {
+                    return [
+                        'pprosedur_id' => $item->first()['pprosedur_id'],
+                        'pprosedur_reg' => $item->first()['pprosedur_reg'],
+                        'pprosedur_prosedur' => $item->first()['pprosedur_prosedur'],
+                        'pprosedur_specialty' => $item->first()['pprosedur_specialty'],
+                        'pprosedur_remark' => $item->first()['pprosedur_remark'],
+                        'pprosedur_dokter' => $item->first()['pprosedur_dokter'],
+                        'pprosedur_deleted' => $item->first()['pprosedur_deleted'],
+                        'created_at' => $item->first()['created_at'],
+                        'updated_at' => $item->first()['updated_at'],
+                    ];
+                });
+                $prosedurs = $merged_prosedur->values()->all();
+
                 $body = [
                     'noreg' => $reg->noreg,
                     'reg_tgl' => $reg->reg_tgl,
@@ -651,7 +703,10 @@ class RajalBundleController extends Controller
                     'practitioner_nama' => $reg->rsrajal_practitioner->ParamedicName,
                     'org_id' => env('SATU_SEHAT_ORGANIZATION_ID'),
                     'asper' => $asper,
-
+                    'diagnosa_primary' => $diagnosa_primary,
+                    'diagnosa_secondary' => $diagnosa_secondary,
+                    'diagnosas' => $diagnosas,
+                    'prosedurs' => $prosedurs,
                 ];
                 // dd($body);
                 $regUpdate = SatusehatRegEncounter::where('noreg', $reg->noreg)->first();
