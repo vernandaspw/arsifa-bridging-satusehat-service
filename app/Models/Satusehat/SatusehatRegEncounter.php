@@ -49,7 +49,7 @@ class SatusehatRegEncounter extends Model
 
     public function rsrajal_diagnosas()
     {
-        return $this->hasMany(RsRajalPasienDiagnosa::class, 'pdiag_reg', 'noreg')->where('pdiag_deleted', 0);
+        return $this->hasMany(RsRajalPasienDiagnosa::class, 'pdiag_reg', 'noreg')->with('icd10')->where('pdiag_deleted', 0);
     }
 
     public function rsrajal_prosedurs()

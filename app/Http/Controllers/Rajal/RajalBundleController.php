@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Rajal;
 
-use App\Http\Controllers\Controller;
-use App\Models\RsRajal\RsRajalRegistration;
-use App\Models\Satusehat\SatusehatLocation;
-use App\Models\Satusehat\SatusehatPatient;
-use App\Models\Satusehat\SatusehatPractitioner;
-use App\Models\Satusehat\SatusehatRegEncounter;
-use App\Services\SatuSehat\PatientService;
-use App\Services\SatuSehat\RajalBundleService;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use App\Models\Satusehat\SatusehatPatient;
+use App\Services\SatuSehat\PatientService;
+use App\Models\RsRajal\RsRajalRegistration;
+use App\Models\Satusehat\SatusehatLocation;
+use App\Models\RsRajal\RsRajalPasienDiagnosa;
+use App\Services\SatuSehat\RajalBundleService;
+use App\Models\Satusehat\SatusehatPractitioner;
+use App\Models\Satusehat\SatusehatRegEncounter;
 
 class RajalBundleController extends Controller
 {
@@ -638,14 +640,18 @@ class RajalBundleController extends Controller
 
                 // $diagnosas = $reg->rsrajal_diagnosas;
 
-                $get_diagnosas = $reg->rsrajal_diagnosas->toArray();
+                $get_diagnosas = $reg->rsrajal_diagnosas;
+                // dd($get_diagnosas);
                 $collection_diagnosas = collect($get_diagnosas);
                 $grouped_diagnosas = $collection_diagnosas->groupBy('pdiag_diagnosa');
                 $merged_diagnosa = $grouped_diagnosas->map(function ($item) {
+                    // dd($item);
                     return [
+                        'uuid' => Str::uuid()->toString(),
                         'pdiag_id' => $item->first()['pdiag_id'],
                         'pdiag_reg' => $item->first()['pdiag_reg'],
                         'pdiag_diagnosa' => $item->first()['pdiag_diagnosa'],
+                        'pdiag_name' => $item->first()['icd10']['NM_ICD10'],
                         'pdiag_status' => $item->first()['pdiag_status'],
                         'pdiag_tipe' => $item->first()['pdiag_tipe'],
                         'pdiag_old_case' => $item->first()['pdiag_old_case'],
